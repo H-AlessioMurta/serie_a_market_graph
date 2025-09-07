@@ -187,7 +187,7 @@ def aggiorna_dati_fantaculo():
 
 def get_fantaculo_by_name(name,id,mapping_id):
         print(f"Chiamata verso fantaculo per {name}")
-        player_url=f'https://fantaculo.it/leghe-srv/api/v1/aste/player?credits=350&flagNoGoal=false&flagModDefense=true&competitionParticipants=12&name={name}&flagSvincolati=false&flagMantra=false&auctionType=pma'
+        player_url=f'https://fantaculo.it/leghe-srv/api/v1/aste/player?credits={crediti}&flagNoGoal=false&flagModDefense=true&competitionParticipants={partecipanti}&name={name}&flagSvincolati=false&flagMantra=false&auctionType=pma'
         x = requests.get(player_url)
         giocatore=x.json()
         return giocatore
@@ -250,7 +250,7 @@ def aggiorna_colonna_AI(file_path):
             # Prendi i valori delle colonne C (3) e B (2) della stessa riga
             team = sheet.cell(row=cell.row, column=3).value
             name = sheet.cell(row=cell.row, column=2).value
-            player_url=f'https://fantaculo.it/leghe-srv/api/v1/aste/player?credits=350&flagNoGoal=false&flagModDefense=true&competitionParticipants=12&name={name}&flagSvincolati=false&flagMantra=false&auctionType=pma'
+            player_url=f'https://fantaculo.it/leghe-srv/api/v1/aste/player?credits={crediti}&flagNoGoal=false&flagModDefense=true&competitionParticipants={partecipanti}&name={name}&flagSvincolati=false&flagMantra=false&auctionType=pma'
             x = requests.get(player_url)
             giocatore=x.json()
             id_ = giocatore['features']['idFantacalcio']
@@ -424,7 +424,7 @@ def fantaalgoritmo(name,fantaid):
         data_fanta['fine_contratto']  = "Non rompere il cazzo" 
     return data_fanta            
 #https://fantaculo.it/leghe-srv/api/v1/aste/listone?credits=500&flagNoGoal=true&flagModDefense=true&competitionParticipants=10&name=null&flagSvincolati=false&flagMantra=false&auctionType=pma
-#https://fantaculo.it/leghe-srv/api/v1/aste/listone?credits=350&flagNoGoal=false&flagModDefense=true&competitionParticipants=12&name=null&flagSvincolati=false&flagMantra=false&auctionType=pma
+#https://fantaculo.it/leghe-srv/api/v1/aste/listone?credits={crediti}&flagNoGoal=false&flagModDefense=true&competitionParticipants={partecipanti}&name=null&flagSvincolati=false&flagMantra=false&auctionType=pma
 if __name__ == "__main__":
     
     mapping_id=transfermarket_teams_list()
