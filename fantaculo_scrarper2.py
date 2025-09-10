@@ -174,12 +174,8 @@ def transfermarket_infos(mapping_id,team,nome):
             "candè":520530,
             "sorensen":514888,
             "hojlund":610442,
+            "balogh": 0,
             "zè pedro":406151
-
-
-
-
-
         }
     if len(nome.split(" ")[0]) >2:
         print(f"Nome {nome} composto da un piu spazi")
@@ -495,18 +491,8 @@ def scraper(mapping_id,lista_infortuni):
     partecipanti=input("Quanti partecipanti?")
     listone=aggiorna_dati_fantaculo(crediti,partecipanti)
     conta = 0
-    understat_records=[]
-    all_seria=[]
-    for team_name, team_list in transfermarket_teams.items():
-        for i in [2025,2024,2023,2022,2021]:
-            if team_name != 'Milan' and team_name != 'Parma':
-                understat_records.append(understat_get_team_players(team_name,i))
-            elif team_name == 'Milan':
-                understat_records.append(understat_get_team_players("Ac_Milan",i))
-            elif team_name == 'Parma':
-                understat_records.append(understat_get_team_players("Parma_Calcio_1913",i))
-    print("fine lista da undestat")
-    df_undestat=pd.DataFrame(understat_records)          
+
+    all_seria=[]       
     for i in listone:
         conta+=1
         print(f'N {conta} chiamata per {i["name"]}')
@@ -524,10 +510,9 @@ def scraper(mapping_id,lista_infortuni):
     filename = "json_fantaculo_" + datetime.today().strftime("%Y-%m-%d") + ".json"
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(all_seria, f, ensure_ascii=False, indent=4)
-    with pd.ExcelWriter('scraper_fantaculo_'+datetime.today().strftime('%Y-%m-%d')+'.xlsx') as writer:
+    with pd.ExcelWriter('rerun_fantaculo_'+datetime.today().strftime('%Y-%m-%d')+'.xlsx') as writer:
         df_all_seriea.to_excel(writer, sheet_name='dati')
-        df_undestat.to_excel(writer, sheet_name='understat')
-        #df_lista_infortuni.to_excel(writer,sheet_name='infortuni')
+        df_lista_infortuni.to_excel(writer,sheet_name='infortuni')
         id_collection.to_excel(writer,sheet_name='ids')
         storico_performances.to_excel(writer,sheet_name='performances')
         storico_infortuni.to_excel(writer,sheet_name='storico_infortuni')
@@ -537,5 +522,5 @@ if __name__ == "__main__":
     mapping_id=transfermarket_teams_list()
     #print(f"Stampo mapping id {mapping_id}")
     lista_infortuni=transfermarket_infortuni()
-    #print(f"Stampo infortuni {lista_infortuni}")
+    print(f"Stampo infortuni {lista_infortuni}")
     scraper(mapping_id,lista_infortuni)

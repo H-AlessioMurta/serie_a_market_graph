@@ -1,12 +1,12 @@
 import pandas as pd
-import json
 import requests
 import openpyxl
+import json
 import matplotlib.pyplot as plt
 from datetime import datetime
 from bs4 import BeautifulSoup
 from openpyxl.drawing.image import Image
-import io
+import time
 import unicodedata
 
 id_collection=pd.DataFrame(columns=['nome','id_fantacalcio','id_transfermarket','id_fantalgoritmo'])
@@ -45,10 +45,11 @@ tabella=pd.DataFrame(columns = [
     'Valore Massimo',           # giocatore['highest']
     'Età',                      # giocatore['age']
     'Descrizione',               # giocatore['descrizione'],
-    'Fine Contratto'
 ])
 grafici=pd.DataFrame(columns=['Giocatore','Grafico'])
-#storico_infortuni=pd.DataFrame(columns=['Giocatore','Anno','totalDays','totalInjuryRate','totalGamesMissed'])
+storico_infortuni=pd.DataFrame(columns=['Giocatore','Anno','totalDays','totalInjuryRate','totalGamesMissed'])
+storico_performance=pd.DataFrame(columns=['Giocatore','Anno','Competition',	'Club',	'Appearances',	'Goals','Assists',	'SubstitutionsOn',	'SubstitutionsOff',	'YellowCards','RedCards',	'MinutesPlayed','minutesPerGoal'])
+
 #body_listone={"credits": 350,"flagNoGoal": False,"flagModDefense": True,"competitionParticipants": 12,"player_name": None,"flagSvincolati": False,"flagMantra": False,"auctionType": "pma","flag_clean_sheet": False, }   
 
 transfermarket_teams = {
@@ -71,7 +72,9 @@ transfermarket_teams = {
     'Empoli': 749,
     'Parma': 130,
     'Como': 1047,
-    'Venezia': 607
+    'Cremonese': 2239,
+    'Sassuolo' : 6574,
+    'Pisa': 4172
 }
 
 def transfermarket_infortuni():
@@ -110,13 +113,50 @@ def get_hometown(link):
 
 
 def transfermarket_infos(mapping_id,team,nome):
-    ecezzioni_note={}
+    ecezzioni_note={
+            "sangare b.": 962125,
+            "nava": 815563,
+            "liberali": 988964,
+            "adzic": 944570,
+            "mbangula": 654991,
+            "ekhator": 934878,
+            "marin re.": 1041614,
+            "bellanova": 357992,
+            "kalolu": 585949,
+            "nicolussi": 430280,
+            "zambo":354361,
+            "lovik":661212,
+            "soulè":668951,
+            "montipò":241923,
+            "laurientè":579930,
+            "konè":624690,
+            "yildiz":845654,
+            "bernabè":466802,
+            "dodò":401529,
+            "lucumì":413565,
+            "marì":210178,
+            "hojholt":543822,
+            "toure":335516,
+            "kone":921655,
+            "kilicsoy":875334,
+            "liteta":1134304,
+            "gronbaek": 503866,
+            "dembelè":1004344,
+            "tourè":335516,
+            "ostigard":367284,
+            "candè":520530,
+            "sorensen":514888,
+            "hojlund":610442,
+            "balogh": 0,
+            "zè pedro":406151
+        }
     id=-1
     link=''
     if len(nome.split(" ")[0]) >2:
         nome_da_cercare=nome.split(" ")[0]
     else:
         nome_da_cercare=nome.split(" ")[0]+' '+nome.split(" ")[1]
+    print(team)
     for a_player in mapping_id[team]:
          if nome_da_cercare.lower().replace("'","") in a_player['name'].lower():
             id=a_player['id']
@@ -141,8 +181,9 @@ def transfermarket_infos(mapping_id,team,nome):
        #print(f"Trovato id di {nome} con valore {id}")
        performance_url=f"https://www.transfermarkt.it/ceapi/player/{id}/performance"
        performance_result=transfermarket_json(performance_url)
+       print(f"ho queste performance {performance_result}")
        for x in performance_result:
-           if x['nameSeason'] != '24/25' and x['nameSeason']  != None :
+           if x['nameSeason']  != None :
                 tm_datas['possibleGames_' + x['nameSeason']] = x['possibleGames']
                 tm_datas['gamesPlayed_' + x['nameSeason']] = x['gamesPlayed']
                 tm_datas['goalsScored_' + x['nameSeason']] = x['goalsScored']
@@ -176,20 +217,25 @@ def transfermarket_infos(mapping_id,team,nome):
        return tm_datas
 
 def transfermarket_json(tmurl):
+    print(tmurl)
     headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"}
     x = requests.get(tmurl, headers=headers)
     return x.json()
 
 def aggiorna_dati_fantaculo():
     print('Chiamata listone aggiornato - Fantaculo')
-    x = requests.get('https://fantaculo.it/leghe-srv/api/v1/aste/listone?credits=500&flagNoGoal=true&flagModDefense=true&competitionParticipants=10&name=null&flagSvincolati=false&flagMantra=false&auctionType=pma')
+    x = requests.get('https://fantaculo.it/leghe-srv/api/v1/aste/listone?credits=350&flagNoGoal=false&flagModDefense=true&competitionParticipants=10&name=null&flagSvincolati=false&flagMantra=false&auctionType=pma')
     return x.json()
 
-def get_fantaculo_by_name(name,id,mapping_id):
-        print(f"Chiamata verso fantaculo per {name}")
-        player_url=f'https://fantaculo.it/leghe-srv/api/v1/aste/player?credits={crediti}&flagNoGoal=false&flagModDefense=true&competitionParticipants={partecipanti}&name={name}&flagSvincolati=false&flagMantra=false&auctionType=pma'
+def get_by_name(name,id,mapping_id):
+        player_url=f'https://fantaculo.it/leghe-srv/api/v1/aste/player?credits=350&flagNoGoal=false&flagModDefense=true&competitionParticipants=10&name={name}&flagSvincolati=false&flagMantra=false&auctionType=pma'
         x = requests.get(player_url)
         giocatore=x.json()
+        print("inizo chiamate")
+        giocatore.update(transfermarket_infos(mapping_id,giocatore['team'],giocatore['name']))
+        print("----fine chiamata transfermarket")
+        giocatore.update(fantacalcio_calciatore(giocatore['team'].lower(),giocatore['name'].lower(),id))
+        print("----fine chiamata fantacalcio.it")
         return giocatore
 
 def scraper(mapping_id,lista_infortuni):
@@ -202,23 +248,78 @@ def scraper(mapping_id,lista_infortuni):
         name=i["name"]
         id=i['idFantacalcio']
         try:
-            fanta_culo_giocatore=get_fantaculo_by_name(name,id,mapping_id)
-            print(f"Campi fantaculo specifici{json.dumps(fanta_culo_giocatore, indent=4)}")
-            trasnfermarket_giocatore=transfermarket_infos(mapping_id,fanta_culo_giocatore['team'],fanta_culo_giocatore['name'])
-            print(f"Campi trasnfermarket specifici{json.dumps(trasnfermarket_giocatore, indent=4)}")
-            break
-         
+            giocatore=get_by_name(name,id,mapping_id)
+            nuovo_rigo = [
+                giocatore['name'],
+                giocatore['team'],
+                giocatore['role'],
+                giocatore['features']['slot'],
+                giocatore['features']['pma'],
+                giocatore['features']['pfc'],
+                (int(giocatore['FVM']['Classic'])/1000)*350,
+                giocatore['features']['expectedFantamedia'],
+                giocatore['features']['expectedTitolarita'],
+                giocatore['features']['penaltyProbability'],
+                giocatore['features']['freeKickProbability'],
+                giocatore['features']['pmaRange'],
+                giocatore['features']['pfcRange'],
+                giocatore['features']['lastThreeYearVotoBase'],
+                giocatore['features']['lastThreeYearFantamedia'],
+                giocatore['features']['lastThreeYearTitolarity'],
+                giocatore['features']['lastFiveYearVotoBase'],
+                giocatore['features']['lastFiveYearFantamedia'],
+                giocatore['features']['lastFiveYearTitolarity'],
+                giocatore['features']['lastYearVotoBase'],
+                giocatore['features']['lastYearFantamedia'],
+                giocatore['features']['lastYearTitolarity'],
+                giocatore['features']['currentSeasonVotoBase'],
+                giocatore['features']['currentSeasonFantamedia'],
+                giocatore['features']['currentSeasonTitolarity'],
+                giocatore['Piede'],
+                giocatore['Altezza'],
+                giocatore['city'],
+                giocatore['Nato il'],
+                giocatore['Nazionalità'],
+                giocatore['current'],
+                giocatore['highest'],
+                giocatore['age'],
+                giocatore['descrizione'],
+            ]
+            print("🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕 rigo fatto  🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕🦕")             
+
+            print(giocatore['performances'])
+            performance=giocatore['performances']
+            for anno, valori in performance.items():
+                # Creazione di un dizionario con i valori per il DataFrame
+                riga_perf = { 'Giocatore': giocatore['name'], 'Anno': anno, 'totalDays': valori['totalDays']['value'], 'totalInjuryRate': valori['totalInjuryRate']['value'], 'totalGamesMissed': valori['totalGamesMissed']['value']                    }
+                # Aggiunta della riga alla lista
+                storico_performance.loc[len(storico_performance)]=riga_perf
+                #print(f"valore infortuni {riga}")
+
+
+            id_array=[giocatore['name'],i['idFantacalcio'],giocatore['id_transfermarket']]
+            #print(f"id_array: {id_array}")
+            tabella.loc[len(tabella)]=nuovo_rigo
+            #print(f"\n===============================\nvalore nuovo_rigo {nuovo_rigo}")
+            id_collection.loc[len(id_collection)]=id_array
+            #print(f"\n===============================\nvalore id_array {id_array}")
+            try:
+                grafici_valore_mercato(giocatore['name'],giocatore['market_values'],giocatore['name']+'.png')
+                print("----Grafico creato")
+            except:
+                print(f"fallita creazione grafico di {name} ")
+                continue
         except:
             print(f"[GRAVE]fallita chiamata di {name}")
             continue
     print('fine-scraping')
     
-    with pd.ExcelWriter('scraper_fantaculo_'+datetime.today().strftime('%Y-%m-%d')+'.xlsx') as writer:
+    with pd.ExcelWriter('graphs_v1_scraper_fantaculo_'+datetime.today().strftime('%Y-%m-%d')+'.xlsx') as writer:
         tabella.to_excel(writer, sheet_name='dati')
         df_lista_infortuni.to_excel(writer,sheet_name='infortuni')
         id_collection.to_excel(writer,sheet_name='ids')
-        #storico_infortuni.to_excel(writer,sheet_name='storico_infortuni')
-
+        storico_infortuni.to_excel(writer,sheet_name='storico_infortuni')
+        storico_performance.to_excel(writer,sheet_name='storico_performance')
     print('file scritto')
 
 def rimuovi_accenti(input_str):
@@ -237,31 +338,6 @@ def applica_rimozione_accenti(data):
     else:
         return data
 
-def aggiorna_colonna_AI(file_path):
-    # Apri il file Excel
-    workbook = openpyxl.load_workbook(file_path)
-    sheet = workbook.active
-    
-    # Scorri tutte le righe della colonna AI (colonna 35)
-    for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=35, max_col=35):
-        cell = row[0]
-        #print(cell.value)
-        if cell.value is None:  # Se la cella è vuota
-            # Prendi i valori delle colonne C (3) e B (2) della stessa riga
-            team = sheet.cell(row=cell.row, column=3).value
-            name = sheet.cell(row=cell.row, column=2).value
-            player_url=f'https://fantaculo.it/leghe-srv/api/v1/aste/player?credits={crediti}&flagNoGoal=false&flagModDefense=true&competitionParticipants={partecipanti}&name={name}&flagSvincolati=false&flagMantra=false&auctionType=pma'
-            x = requests.get(player_url)
-            giocatore=x.json()
-            id_ = giocatore['features']['idFantacalcio']
-            # Chiamata alla funzione fantacalcio_calciatore
-            nuovo_valore = fantacalcio_calciatore(team, name, id_)
-            print(f"Nuova descrizione per {name}:\n{nuovo_valore['descrizione']}")
-            # Aggiorna la cella con il valore ottenuto
-            sheet.cell(row=cell.row, column=35).value = nuovo_valore['descrizione']
-    # Salva il file
-    workbook.save(file_path)
-
 def aggiorna_rigo(file_path,mapping_id):
     # Apri il file Excel
     df = pd.read_excel(file_path)
@@ -269,11 +345,17 @@ def aggiorna_rigo(file_path,mapping_id):
     listone=aggiorna_dati_fantaculo()
     for i in listone:
         if i['name'] not in  df['Nome Giocatore'].values:
-            
             name=i["name"]
             print(f"Non trovato {name}")
             id=i['idFantacalcio']
-            giocatore=get_fantaculo_by_name(name,id,mapping_id)
+            if i['team'] == '*':
+                print(f"senza squadra {i['team']} 🦕")
+                continue
+            try:
+                giocatore=get_by_name(name,id,mapping_id)
+            except Exception as err:
+                print(f"fallisco a poolare il campo 🦕 {err}")
+                continue
             nuovo_rigo = [
                     "xyz",
                     giocatore['name'],
@@ -309,17 +391,11 @@ def aggiorna_rigo(file_path,mapping_id):
                     giocatore['current'],
                     giocatore['highest'],
                     giocatore['age'],
-                    giocatore['descrizione'],
-                    giocatore['fine_contratto']
-  
+                    giocatore['descrizione'] 
                 ]
             print(f"provo ad aggiornare per {name}")
             df.loc[len(df)]=nuovo_rigo
             df.to_excel(file_path, index=False)
-
-
-    
-
 
 def transfermarket_teams_list():
     headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"}
@@ -328,22 +404,27 @@ def transfermarket_teams_list():
             url=f'https://www.transfermarkt.it/quickselect/players/{team_list}'
             id_list= requests.get(url, headers=headers)
             teams[team_name]=applica_rimozione_accenti(id_list.json())
+    print(teams)
     return teams
 
 def fantacalcio_calciatore(team,name,id):
     fc_datas={}
     fantacalcio_calciatore_profile_url=f'https://www.fantacalcio.it/serie-a/squadre/{team}/{name}/{id}'
+    print(f"verifica che esista {fantacalcio_calciatore_profile_url}")
     headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"}
     html = requests.get(fantacalcio_calciatore_profile_url, headers=headers)
     soup = BeautifulSoup(html.content, "html.parser")
-    section = soup.find('section', {'id': 'player-description'})
+    section = (
+        soup.find('section', {'id': 'player-description'})
+        or soup.find('section', {'id': 'description'})
+        or soup.find('section', {'id': 'player-main-info'})
+    )
     fc_datas['descrizione'] = ''
     for class_name in ['p1', 'li1', 'ul1','bullist','p2']:
         p1_tags = section.find_all(class_=class_name)
         for p1 in p1_tags:
             fc_datas['descrizione']= str(fc_datas['descrizione'])+p1.get_text(strip=True)
     dt_tag = soup.find('dt', string='Piede')
-
     # Trovare il successivo elemento <dd> rispetto a <dt>
     dd_tag = dt_tag.find_next('dd')
 
@@ -358,6 +439,7 @@ def fantacalcio_calciatore(team,name,id):
     # Nazionalità
     nazionalita = soup.find('dd', class_='nationalities').text
     fc_datas['Nazionalità'] = nazionalita
+    print("fin la")
     # Medie
     medie = {}
     medie_elements = soup.select('.player-stats .group:nth-of-type(1) .badge')
@@ -393,7 +475,6 @@ def grafici_valore_mercato(name, market_values, file_path):
     plt.close()
 
 def fantaalgoritmo(name,fantaid):
-    
     token =  "Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICItTzNCNEJ0dGdUclFNNldRQnF6S1NBNUJicjdPV281SnhnbUYzclMzVzdvIn0.eyJleHAiOjE3MjQ0MjA2MzAsImlhdCI6MTcyNDQxNzAzMCwiYXV0aF90aW1lIjoxNzI0NDE3MDI5LCJqdGkiOiIwZjg2NDAyNS1mZGQwLTQ2ZTItYjE5Zi0xZmExODRjMTYyYmQiLCJpc3MiOiJodHRwczovL2FkbWluLmZhbnRhbGdvcml0bW8uaXQvcmVhbG1zL2ZhbnRhbGdvcml0bW8iLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiNDg1NzBiYzgtMjVjZi00Yzg5LWJlYjEtOWMzOTkxMjgwNWUxIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiZmFudGFsZ29yaXRtby1hcHAtcmVnaXN0ZXIiLCJub25jZSI6ImNhY2VmZGU4LWY3YmUtNDc3My1hN2YxLWMyYTRjY2U3ZDY5ZiIsInNlc3Npb25fc3RhdGUiOiI3OTUxMzM1Yi1lOGIyLTQzM2ItOTlkNi01OTM5ODhkY2IxZGYiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHBzOi8vYXBwLmZhbnRhbGdvcml0bW8uaXQvKiIsImh0dHBzOi8vYXBwLmZhbnRhbGdvcml0bW8uaXQiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtZmFudGFsZ29yaXRtbyIsIm9mZmxpbmVfYWNjZXNzIiwiZnJlZW1pdW0iLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIGVtYWlsIHByb2ZpbGUiLCJzaWQiOiI3OTUxMzM1Yi1lOGIyLTQzM2ItOTlkNi01OTM5ODhkY2IxZGYiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6IkFsZXNzaW8gTXVydGEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhbGVzc2lvLm11cnRhQGdtYWlsLmNvbSIsImdpdmVuX25hbWUiOiJBbGVzc2lvIiwiZmFtaWx5X25hbWUiOiJNdXJ0YSIsImVtYWlsIjoiYWxlc3Npby5tdXJ0YUBnbWFpbC5jb20ifQ.SmqDOJHV9CZ8FowkONsvEZDHs1_iPUqo-84y4pgVf5HSJIvnm3SVnc9dZMCegkeQmKwZcsV5NA6ixdVyNQ5P0DmcxESX8fT0VSZN5tLQGdE4smiExr0UFdCDNUlbq8e1W71lMvDu0dDIwniFOViqoLtaT3pWePASWfFlG3HeZqViBNyK6SrH70bZjDoyGTrX07w7qULjqE0vPZROUX7S-bV3rQIwmGb0X6qzevTRo3OFFvadQwSWoWhRIHwvifycXElntTNZ60yovR4tLyVWqvIequJNLOETn8w1-Z_CWc9vTywBHKnMdxUTPgw0XKWW-UQFfMui7IHLhjKq_x6n3A"
     headers = { 
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
@@ -423,13 +504,103 @@ def fantaalgoritmo(name,fantaid):
     if "fine_contratto" not in data_fanta:
         data_fanta['fine_contratto']  = "Non rompere il cazzo" 
     return data_fanta            
-#https://fantaculo.it/leghe-srv/api/v1/aste/listone?credits=500&flagNoGoal=true&flagModDefense=true&competitionParticipants=10&name=null&flagSvincolati=false&flagMantra=false&auctionType=pma
-#https://fantaculo.it/leghe-srv/api/v1/aste/listone?credits={crediti}&flagNoGoal=false&flagModDefense=true&competitionParticipants={partecipanti}&name=null&flagSvincolati=false&flagMantra=false&auctionType=pma
+
+def parse_tabella_giocatore(giocatore, squadra):
+    BASE_URL = "https://www.transfermarkt.it"
+    HEADERS = {"User-Agent": "Mozilla/5.0"} 
+    url = BASE_URL + giocatore["link"].replace("profil", "leistungsdatendetails")+"/saison//verein/0/liga/0/wettbewerb//pos/0/trainer_id/0/plus/1"
+    print(f"Scarico {giocatore['name']} → {url}")
+    r = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(r.text, "html.parser")
+
+    # estraggo la stagione attuale
+
+    table = soup.find("table", {"class": "items"})
+    if not table or table is None:
+        return "Riprova"
+    dati_giocatore = []
+    for row in table.select("tbody tr"):
+        cols = [c.get_text(strip=True) for c in row.find_all("td")]
+        if not cols:
+            continue
+        print(cols)
+        dati = {
+            "Giocatore": giocatore["name"],
+            "Anno": cols[0],
+            "Competition": cols[2] if len(cols) > 2 else "",
+            "Club": squadra,
+            "Appearances": cols[5] if len(cols) > 2 else "",
+            "Punti A Partita": cols[6] if len(cols) > 2 else "",
+            "Goals": cols[7] if len(cols) > 3 else "",
+            "Assists": cols[8] if len(cols) > 4 else "",
+            "Entrate": cols[9] if len(cols) > 7 else "",
+            "Sostituzioni": cols[10] if len(cols) > 7 else "",
+            "Gialli": cols[11] if len(cols) > 7 else "",
+            "Doppi Gialli": cols[12] if len(cols) > 7 else "",
+            "Rossi": cols[12] if len(cols) > 7 else "",
+            "Rigori": cols[12] if len(cols) > 7 else "",
+            "MinutesPlayed": cols[-2] if len(cols) > 2 else "",
+            "minutesPerGoal": cols[-1] if len(cols) > 1 else "",
+        }
+        dati_giocatore.append(dati)
+    return dati_giocatore
+
+
+def transfer_market_performance(mapping_id):
+    tutti_dati = []
+    for squadra, giocatori in mapping_id.items():
+        for g in giocatori:
+            while True:
+                dati = parse_tabella_giocatore(g, squadra)
+                if dati != "Riprova":
+                    tutti_dati.extend(dati)
+                    break
+                else:
+                    print(f"riprovo per {g}")
+                    time.sleep(30)               
+
+    # Scrittura Excel
+    df = pd.DataFrame(tutti_dati, columns=[
+            "Giocatore",
+            "Anno",
+            "Competition",
+            "Club",
+            "Appearances",
+            "Punti A Partita",
+            "Goals",
+            "Assists",
+            "Entrate",
+            "Sostituzioni",
+            "Gialli",
+            "Doppi Gialli",
+            "Rossi",
+            "Rigori",
+            "MinutesPlayed",
+            "minutesPerGoal"
+    ])
+    df.to_excel("AA_dati_giocatori.xlsx", index=False)
+    print("File Excel 'dati_giocatori.xlsx' scritto con successo!")
+
+
+
+
+
+
+
+#https://fantaculo.it/leghe-srv/api/v1/aste/listone?credits=350&flagNoGoal=false&flagModDefense=true&competitionParticipants=12&name=null&flagSvincolati=false&flagMantra=false&auctionType=pma
 if __name__ == "__main__":
     
-    mapping_id=transfermarket_teams_list()
-    for i in mapping_id:
-        print(f"{i}")
-    #aggiorna_rigo("scraper_fantaculo_2025-08-20.xlsx",mapping_id)
-    lista_infortuni=transfermarket_infortuni()
-    scraper(mapping_id,lista_infortuni)
+
+    raw=aggiorna_dati_fantaculo()
+    df = pd.DataFrame(raw, columns=["name", "idFantacalcio"])
+    # Salvataggio in Excel
+    df.to_excel("id.xlsx", index=False)
+
+    print("File Excel creato: giocatori.xlsx")
+    #mapping_id=transfermarket_teams_list()
+    #print(mapping_id)
+    #transfer_market_performance(mapping_id)
+    #aggiorna_rigo("graphs_scraper_fantaculo_2025-09-09.xlsx",mapping_id)
+    #lista_infortuni=transfermarket_infortuni()
+    #scraper(mapping_id,lista_infortuni)
+ 
